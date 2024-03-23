@@ -1,4 +1,4 @@
-#creating a vpc with cidr range - 10.0.0.0/16
+#creating a VPC with CIDR range - 10.0.0.0/16
 resource "aws_vpc" "vpc" {
   cidr_block = var.cidr
   tags = {
@@ -24,14 +24,14 @@ resource "aws_subnet" "sub2" {
     Name = "tf-public-subnet-2"
   }
 }
-#creating internet_gateway for subnet accessing internet
+#creating internet_gateway for subnet accessing the internet
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.vpc.id
   tags = {
     Name = "tf-igw"
   }
 }
-#creating routetable in the above vpc and attaching igw
+#creating a route table in the VPC and attaching Internet-Gateway
 resource "aws_route_table" "rt" {
   vpc_id = aws_vpc.vpc.id
 
@@ -40,7 +40,7 @@ resource "aws_route_table" "rt" {
     gateway_id = aws_internet_gateway.igw.id
   }
 }
-#associating the igw with subnets
+#associating the Internet gateway with subnets
 resource "aws_route_table_association" "rta1" {
   subnet_id      = aws_subnet.sub1.id
   route_table_id = aws_route_table.rt.id
@@ -58,14 +58,14 @@ resource "aws_security_group" "websg" {
     description = "HTTP from VPC"
     from_port   = 80
     to_port     = 80
-    protocol    = "tcp"
+    protocol    = "TCP"
     cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
     description = "SSH"
     from_port   = 22
     to_port     = 22
-    protocol    = "tcp"
+    protocol    = "TCP"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -83,7 +83,11 @@ resource "aws_security_group" "websg" {
 resource "aws_s3_bucket" "s3" {
   bucket = "lokeshterraformproject"
 }
-resource "aws_s3_bucket_versioning" "s3-v" {
+resource "aws_s3_bucket_acl" "s3-acl" {
+  bucket = aws_s3_bucket.s3.id
+  acl = "Private"
+}
+resource "aws_s3_bucket_versioning" "s3-version" {
   bucket = aws_s3_bucket.s3.id
   versioning_configuration {
     status = "Enabled"
@@ -110,7 +114,7 @@ resource "aws_instance" "webserver2" {
     Name = "tf-ec2-webserver-2"
   }
 }
-#creating application loadbalancer for traffic routing into instances
+#creating application load balancer for traffic routing into instances
 resource "aws_lb" "alb" {
   name               = "alb"
   internal           = false
@@ -123,7 +127,7 @@ resource "aws_lb" "alb" {
     Name = "tf-alb"
   }
 }
-#creating target-group for alb
+#creating target group for alb
 resource "aws_lb_target_group" "alb-tg" {
   name     = "tf-alb-tg"
   port     = 80
@@ -134,7 +138,7 @@ resource "aws_lb_target_group" "alb-tg" {
     port = "traffic-port"
   }
 }
-#attaching the instances to target-group
+#attaching the instances to target group
 resource "aws_lb_target_group_attachment" "alb-tg-a-1" {
   target_group_arn = aws_lb_target_group.alb-tg.arn
   target_id        = aws_instance.webserver1.id
@@ -146,7 +150,7 @@ resource "aws_lb_target_group_attachment" "alb-tg-a-2" {
   target_id        = aws_instance.webserver2.id
   port             = 80
 }
-#adding listener to the alb
+#adding a listener to the alb
 resource "aws_lb_listener" "listener" {
   load_balancer_arn = aws_lb.alb.arn
   port              = 80
